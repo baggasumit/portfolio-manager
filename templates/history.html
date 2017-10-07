@@ -1,0 +1,34 @@
+{% extends "layout.html" %}
+
+{% block title %}
+    History
+{% endblock %}
+
+{% block main %}
+    <h3>Transaction History</h3>
+        {% if transactions %}
+            <table>
+              <tr>
+                <th>Symbol</th>
+                <th>Type</th>
+                <th>Quantity</th>
+                <th class='right'>Price</th>
+                <th>Date</th>
+              </tr>
+              {% for trx in transactions %}
+                  
+                <tr class="{{ 'buy' if trx['quantity'] > 0 else 'sell' }}">
+                  <td>{{ trx['symbol'] }}</td>
+                  <td>{{ "Buy" if trx['quantity'] > 0 else "Sell" }}</td>
+                  <td>{{ trx['quantity']|abs }}</td>
+                  <td class='right'>{{ "$%.2f"|format(trx['price']) }}</td>
+                  <td>{{ trx['date'] }}</td>
+                </tr>
+                  
+              {% endfor %}
+            </table>
+        {% else %}
+            <br>
+            <h5>No transactions yet</h5>
+        {% endif %}
+{% endblock %}

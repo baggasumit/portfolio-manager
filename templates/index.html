@@ -1,0 +1,41 @@
+{% extends "layout.html" %}
+
+{% block title %}
+    Homepage
+{% endblock %}
+
+{% block main %}
+    <h3>Summary</h3>
+    <table>
+      <tr>
+        <th>Symbol</th>
+        <th>Quantity</th>
+        <th class='right'>Price</th>
+        <th class='right'>Total</th>
+      </tr>
+      {% if shares_info %}
+        {% for share in shares_info %}
+            {% if share['count'] > 0 %}
+            <tr>
+              <td>{{ share['symbol'] }}</td>
+              <td>{{ share['count'] }}</td>
+              <td class='right'>{{ share['price'] }}</td>
+              <td class='right'>{{ share['market_value'] }}</td>
+            </tr>
+            {% endif %}
+        {% endfor %}
+      {% endif %}
+      <tr style="background-color:#ECEFF1">
+        <td>CASH</td>
+        <td></td>
+        <td></td>
+        <td class='right'>{{ cash_balance }}</td>
+      </tr>
+      <tr>
+        <td></td>
+        <td></td>
+        <td></td>
+        <td class='right'><strong>{{ grand_total }}</strong></td>
+      </tr>
+    </table>
+{% endblock %}

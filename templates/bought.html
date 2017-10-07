@@ -1,0 +1,12 @@
+{% extends "layout.html" %}
+
+{% block title %}
+    Quote
+{% endblock %}
+
+{% block main %}
+    <h3>Transaction successful!</h3>
+    {% if stock %}
+        <div>You bought {{ quantity }} shares of {{ stock.name }}</div>
+    {% endif %}
+{% endblock %}
