@@ -54,7 +54,8 @@ def index():
         for share in shares_info:
             symbol = share['symbol']
             count = share['count']
-            current_price = lookup(symbol)['price']
+            stock = lookup(symbol)
+            current_price = stock['price'] if stock else 0
             market_value = current_price * count
             share['price'] = usd(current_price)
             share['market_value'] = usd(market_value)
