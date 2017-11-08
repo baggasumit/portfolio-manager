@@ -1,4 +1,4 @@
-import csv
+import ssl
 import urllib.request
 import json
 from flask import redirect, render_template, request, session, url_for, flash
@@ -40,11 +40,15 @@ def lookup(symbol):
     if "," in symbol:
         return None
 
-    # query Yahoo for quote
-    # http://stackoverflow.com/a/21351911
+    # query IEX for quote as YAHOO Finance API is no longer available
+    # https://news.ycombinator.com/item?id=15617576
     try:
+        ctx = ssl.create_default_context()
+        ctx.check_hostname = False
+        ctx.verify_mode = ssl.CERT_NONE
+
         url = "https://api.iextrading.com/1.0/stock/{}/quote".format(symbol)
-        data = json.load(urllib.request.urlopen(url))
+        data = json.load(urllib.request.urlopen(url, context=ctx))
 
         # Code for old yahoo finance api
         # webpage = urllib.request.urlopen(url)
