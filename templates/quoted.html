@@ -8,7 +8,7 @@
     <h3>Stock Details</h3>
     {% if stock %}
         <div>{{ stock.name }}</div>
-        <div>{{ stock.price }}</div>
+        <div>${{ stock.price }}</div>
         <div>{{ stock.symbol }}</div>
     {% endif %}
 {% endblock %}

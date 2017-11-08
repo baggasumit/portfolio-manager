@@ -1,13 +1,15 @@
-from cs50 import SQL
+from sql_wrapper import SQL
 from flask import Flask, flash, redirect, render_template, request, session, url_for
 from flask_session import Session
 from passlib.apps import custom_app_context as pwd_context
 from tempfile import mkdtemp
+# from flask_cors import CORS
 
-from helpers import *
+from helpers import apology, login_required, lookup, usd
 
 # configure application
 app = Flask(__name__)
+# CORS(app)
 
 # ensure responses aren't cached
 if app.config["DEBUG"]:
@@ -30,14 +32,15 @@ Session(app)
 # configure CS50 Library to use SQLite database
 db = SQL("sqlite:///finance.db")
 
+
 @app.route("/")
 @login_required
 def index():
     userid = int(session["user_id"])
     
     # Retrieve user's cash 
-    cashRow = db.execute("SELECT cash from users WHERE id = :userid", userid=userid)
-    cash_balance = cashRow[0]['cash']
+    cash_row = db.execute("SELECT cash from users WHERE id = :userid", userid=userid)
+    cash_balance = cash_row[0]['cash']
     
     # Retrieve user's shares info from transactions table
     # Retrieve total number of shares for each symbol
@@ -57,7 +60,9 @@ def index():
             share['market_value'] = usd(market_value)
             grand_total += market_value
     
-    return render_template("index.html", shares_info=shares_info, grand_total=usd(grand_total), cash_balance=usd(cash_balance))
+    return render_template("index.html", shares_info=shares_info, grand_total=usd(grand_total),
+                           cash_balance=usd(cash_balance))
+
 
 @app.route("/buy", methods=["GET", "POST"])
 @login_required
@@ -85,7 +90,7 @@ def buy():
         price = float(stock["price"])
         # calculate total price of shares
         total_price = int(quantity) * price
-        # Retreive user info
+        # Retrieve user info
         userid = int(session["user_id"])
         # query database for userid
         rows = db.execute("SELECT * FROM users WHERE id = :id", id=userid)
@@ -98,11 +103,15 @@ def buy():
             return apology("Not enough cash")
         
         # Add transaction to database and update users cash
-        db.execute("INSERT INTO transactions (userid, symbol, price, quantity) VALUES (:userid, :symbol, :price, :quantity)", 
-            userid=userid, symbol=symbol, price=price, quantity=int(quantity))
-        db.execute("UPDATE users SET cash = :cash_left WHERE id = :id", id=userid, cash_left=(cash - total_price))
-        
-        return render_template("bought.html", stock=stock, quantity=quantity)
+        db.execute("INSERT INTO transactions (userid, symbol, price, quantity)" 
+                   "VALUES (:userid, :symbol, :price, :quantity)",
+                   userid=userid, symbol=symbol, price=price, quantity=int(quantity))
+        db.execute("UPDATE users SET cash = :cash_left WHERE id = :id",
+                   id=userid, cash_left=(cash - total_price))
+
+        flash('Transaction Successful. You bought {quantity} shares of {stock_name}'
+              .format(quantity=quantity, stock_name=stock['name']), 'alert-info')
+        return index()
     else:
         return render_template("buy.html")
     
@@ -116,12 +125,14 @@ def history():
         'SELECT * FROM "transactions" WHERE userid = :userid', userid=userid)
     return render_template("history.html", transactions=transactions)
 
+
 @app.route("/login", methods=["GET", "POST"])
 def login():
     """Log user in."""
 
     # forget any user_id
-    session.clear()
+    # session.clear()
+    session.pop('user_id', None)
 
     # if user reached route via POST (as by submitting a form via POST)
     if request.method == "POST":
@@ -139,17 +150,19 @@ def login():
 
         # ensure username exists and password is correct
         if len(rows) != 1 or not pwd_context.verify(request.form.get("password"), rows[0]["hash"]):
-            return apology("invalid username or password")
+            return apology("Invalid username or password")
 
         # remember which user has logged in
         session["user_id"] = rows[0]["id"]
 
         # redirect user to home page
+        flash('You were successfully logged in', 'alert-info')
         return redirect(url_for("index"))
 
     # else if user reached route via GET (as by clicking a link or via redirect)
     else:
         return render_template("login.html")
+
 
 @app.route("/logout")
 def logout():
@@ -160,6 +173,7 @@ def logout():
 
     # redirect user to login form
     return redirect(url_for("login"))
+
 
 @app.route("/quote", methods=["GET", "POST"])
 @login_required
@@ -175,25 +189,26 @@ def quote():
         return render_template("quoted.html", stock=stock)
     else:
         return render_template("quote.html")
-    # return apology("TODO")
+
 
 @app.route("/register", methods=["GET", "POST"])
 def register():
     """Register user."""
     
     # forget any user_id
-    session.clear()
-    
+    # session.clear()
+    session.pop('user_id', None)
+
     if request.method == "POST":
         # ensure username was submitted
         if not request.form.get("username"):
-            return apology("must provide username")
+            return apology("Must provide username")
         # ensure password was submitted
         elif not request.form.get("password"):
-            return apology("must provide password")
+            return apology("Must provide password")
         # ensure user confirmed password
         elif not request.form.get("confirmPassword"):
-            return apology("must confirm password")
+            return apology("Must confirm password")
             
         username = request.form.get("username")
         password = request.form.get("password")
@@ -207,16 +222,15 @@ def register():
             return apology("Username already exists")
         
         # Insert user into DB
-        userid = db.execute("INSERT INTO users (username, hash) VALUES (:username, :pwhash)", 
-            username=username, pwhash=pwd_context.encrypt(password))
+        userid = db.execute("INSERT INTO users (username, hash) VALUES (:username, :pwhash)",
+                            username=username, pwhash=pwd_context.hash(password))
 
         session["user_id"] = userid
         return redirect(url_for("index"))
     # else if user reached route via GET
     else:
         return render_template("register.html")
-        
-    # return apology("TODO")
+
 
 @app.route("/sell", methods=["GET", "POST"])
 @login_required
@@ -241,7 +255,7 @@ def sell():
         if not stock:
             return apology("Stock symbol does not exist")
             
-        # Retreive user info
+        # Retrieve user info
         userid = int(session["user_id"])
         
         # Check if user has enough shares
@@ -266,14 +280,17 @@ def sell():
         # Retrieve user's available cash   
         cash = float(rows[0]["cash"])
         # Check if user has enough cash
-    
-        
+
         # Add transaction to database and update users cash
-        db.execute("INSERT INTO transactions (userid, symbol, price, quantity) VALUES (:userid, :symbol, :price, :quantity)", 
-            userid=userid, symbol=symbol.upper(), price=price, quantity=-quantity)
-        db.execute("UPDATE users SET cash = :cash_left WHERE id = :id", id=userid, cash_left=(cash + total_price))
-        
-        return render_template("sold.html", stock=stock, quantity=quantity)
+        db.execute("INSERT INTO transactions (userid, symbol, price, quantity)"
+                   "VALUES (:userid, :symbol, :price, :quantity)",
+                   userid=userid, symbol=symbol.upper(), price=price, quantity=-quantity)
+        db.execute("UPDATE users SET cash = :cash_left WHERE id = :id",
+                   id=userid, cash_left=(cash + total_price))
+
+        flash('Transaction Successful. You sold {quantity} shares of {stock_name}'
+              .format(quantity=quantity, stock_name=stock['name']), 'alert-info')
+        return index()
     else:
         return render_template("sell.html")
 
@@ -290,11 +307,11 @@ def changepw():
         
         # ensure fields are not empty
         if not old_password:
-            return apology("must provide old password")
+            return apology("Must provide old password")
         elif not new_password:
-            return apology("must provide new password")  
+            return apology("Must provide new password")
         elif not confirm_password:
-            return apology("must confirm password")
+            return apology("Must confirm password")
             
         # check if passwords match
         if new_password != confirm_password:
@@ -308,8 +325,10 @@ def changepw():
         # ensure password is correct
         if not pwd_context.verify(old_password, user_info[0]["hash"]):
             return apology("Old password is incorrect")
-        db.execute("UPDATE users SET hash = :hash WHERE id = :userid", hash=pwd_context.encrypt(new_password), userid=userid)
-        
-        return render_template("pwchanged.html")
+        db.execute("UPDATE users SET hash = :hash WHERE id = :userid",
+                   hash=pwd_context.hash(new_password), userid=userid)
+
+        flash('Password changed successfully', 'alert-info')
+        return index()
     else:
         return render_template("changepw.html")

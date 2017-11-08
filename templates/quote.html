@@ -4,15 +4,25 @@
     Quote
 {% endblock %}
 
-{% block main %}
-    <form action="{{ url_for('quote') }}" method="post">
+{% block main -%}
+    <form action="{{ url_for('quote') }}" method="post" name="quoteForm">
         <fieldset>
             <div class="form-group">
-                <input autocomplete="off" autofocus class="form-control" name="symbol" placeholder="Stock Symbol" type="text"/>
+                <input autocomplete="off" autofocus class="form-control" name="symbol" placeholder="Stock Symbol"
+                       type="text" required pattern="[a-zA-Z]+"/>
             </div>
             <div class="form-group">
                 <button class="btn btn-default" type="submit">Lookup</button>
             </div>
         </fieldset>
     </form>
-{% endblock %}
+    <div id="quoteResults">
+        <table>
+          <tr id="quoteResultsHeader" hidden>
+            <th>Symbol</th>
+            <th>Company Name</th>
+            <th class='right'>Price</th>
+          </tr>
+        </table>
+    </div>
+{% endblock -%}

@@ -1,22 +1,19 @@
 import csv
 import urllib.request
-
-from flask import redirect, render_template, request, session, url_for
+import json
+from flask import redirect, render_template, request, session, url_for, flash
 from functools import wraps
 
-def apology(top="", bottom=""):
-    """Renders message as an apology to user."""
-    def escape(s):
-        """
-        Escape special characters.
 
-        https://github.com/jacebrowning/memegen#special-characters
-        """
-        for old, new in [("-", "--"), (" ", " "), ("_", "__"), ("?", "~q"),
-            ("%", "~p"), ("#", "~h"), ("/", "~s"), ("\"", "''")]:
-            s = s.replace(old, new)
-        return s
-    return render_template("apology.html", top=escape(top), bottom=escape(bottom))
+def apology(msg):
+    """Renders message as an apology to user."""
+    flash(msg, 'alert-danger')
+    print('***')
+    print(request.url)
+    print(msg)
+    return redirect(request.url)
+    # return render_template('apology.html')
+
 
 def login_required(f):
     """
@@ -30,6 +27,7 @@ def login_required(f):
             return redirect(url_for("login", next=request.url))
         return f(*args, **kwargs)
     return decorated_function
+
 
 def lookup(symbol):
     """Look up quote for symbol."""
@@ -45,25 +43,29 @@ def lookup(symbol):
     # query Yahoo for quote
     # http://stackoverflow.com/a/21351911
     try:
-        url = "http://download.finance.yahoo.com/d/quotes.csv?f=snl1&s={}".format(symbol)
-        webpage = urllib.request.urlopen(url)
-        datareader = csv.reader(webpage.read().decode("utf-8").splitlines())
-        row = next(datareader)
-    except:
+        url = "https://api.iextrading.com/1.0/stock/{}/quote".format(symbol)
+        data = json.load(urllib.request.urlopen(url))
+
+        # Code for old yahoo finance api
+        # webpage = urllib.request.urlopen(url)
+        # datareader = csv.reader(webpage.read().decode("utf-8").splitlines())
+        # row = next(datareader)
+    except Exception:
         return None
 
     # ensure stock exists
     try:
-        price = float(row[2])
-    except:
+        price = float(data["latestPrice"])
+    except Exception:
         return None
 
     # return stock's name (as a str), price (as a float), and (uppercased) symbol (as a str)
     return {
-        "name": row[1],
+        "name": data["companyName"],
         "price": price,
-        "symbol": row[0].upper()
+        "symbol": data["symbol"].upper()
     }
+
 
 def usd(value):
     """Formats value as USD."""
