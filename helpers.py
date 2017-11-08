@@ -1,5 +1,6 @@
 import ssl
 import urllib.request
+import requests
 import json
 from flask import redirect, render_template, request, session, url_for, flash
 from functools import wraps
@@ -43,13 +44,13 @@ def lookup(symbol):
     # query IEX for quote as YAHOO Finance API is no longer available
     # https://news.ycombinator.com/item?id=15617576
     try:
-        ctx = ssl.create_default_context()
-        ctx.check_hostname = False
-        ctx.verify_mode = ssl.CERT_NONE
+        # ctx = ssl.create_default_context()
+        # ctx.check_hostname = False
+        # ctx.verify_mode = ssl.CERT_NONE
 
         url = "https://api.iextrading.com/1.0/stock/{}/quote".format(symbol)
-        data = json.load(urllib.request.urlopen(url, context=ctx))
-
+        # data = json.load(urllib.request.urlopen(url, context=ctx))
+        data = requests.get(url).json()
         # Code for old yahoo finance api
         # webpage = urllib.request.urlopen(url)
         # datareader = csv.reader(webpage.read().decode("utf-8").splitlines())
